@@ -95,6 +95,9 @@ int main(int, char**)
 	MouseParams mp; // Le-Wi: Zur Auswertung von Mouse-Events
 	Scalar colour;
 	Mat	cam_img; //eingelesenes Kamerabild
+	Mat	last_modified_img; // img which was last modified
+	int animation_counter_up = 0;
+	int animation_counter_side = 0;
 	Mat cam_img_grey; //Graustufenkamerabild für autom. Startgesichtfestlegung
 	Mat strElement; //Strukturelement für Dilatations-Funktion
 	Mat3b rgb_scale;	// leerer Bildkontainer für RGB-Werte
@@ -110,6 +113,8 @@ int main(int, char**)
 	bool median_flag = false;
 	bool flip_flag = true;
 	bool animation_flag = false;
+	bool start_animation = false;
+	bool start_fall = false;
 	DemoState state; //Aktueller Zustand des Spiels
 #if defined _DEBUG || defined LOGGING
 	FILE* log = NULL;
@@ -252,7 +257,35 @@ int main(int, char**)
 
 		if (animation_flag)
 		{
-			animate(cam_img, cam_img);
+			if (start_animation)
+			{
+				//cam_img.copyTo(last_modified_img);
+				animation_counter_up = 0;
+				animation_counter_side = 1;
+				start_animation = false;
+				start_fall = false;
+			}
+
+			if (animation_counter_up > height - 150)
+			{
+				animation_counter_up = 0;
+				animation_counter_side = 0;
+				start_fall = true;
+			}
+
+			if (start_fall)
+			{
+				animation_counter_up -= 5;
+				translateImage(cam_img, cam_img, animation_counter_side, animation_counter_up);
+
+			}
+			else
+			{
+				// ascend
+				animation_counter_up += 1;
+				animation_counter_side = -1 * (animation_counter_side + 2);
+				translateImage(cam_img, cam_img, animation_counter_side, animation_counter_up);
+			}
 		}
 
 		/* example of accessing the image data */
@@ -322,6 +355,7 @@ int main(int, char**)
 		}
 		else if (key == 'r')
 		{
+			start_animation = true;
 			animation_flag = !animation_flag;
 		}
 
@@ -367,7 +401,7 @@ int main(int, char**)
 		{
 			break;
 		}
-		imshow(windowGameOutput, cam_img); //Ausgabefenster darstellen		
+		imshow(windowGameOutput, cam_img); //Ausgabefenster darstellen
 	}	// Ende der Endlos-Schleife
 
 	//Freigabe aller Matrizen
@@ -385,7 +419,7 @@ int main(int, char**)
 	cvDestroyAllWindows();
 	//_CrtDumpMemoryLeaks();
 	exit(0);
-}
+	}
 
 #pragma endregion
 
@@ -402,14 +436,43 @@ void animate(cv::InputArray inputImage, cv::InputArray outputImage)
 		{
 			Vec3b pixel = mat.at<Vec3b>(i, j);
 			//res_mat.at<Vec3b>(i, j) = pixel + Vec3b(100, -50, -50);
-			res_mat.at<Vec3b>(i, j) = pixel * 0.3;
-			//if (i - 5 > 0 && j - 5 > 0)
-			//	res_mat.at<Vec3b>(i, j) = mat.at<Vec3b>(i - 5, j - 5);
-			//else
-			//	res_mat.at<Vec3b>(i, j) = Vec3b(0, 0, 0);
+
+			if (i + 5 < mat.rows && j + 5 > mat.cols)
+				res_mat.at<Vec3b>(i, j) = mat.at<Vec3b>(i + 5, j + 5);
+			else
+				res_mat.at<Vec3b>(i, j) = Vec3b(0, 0, 0);
 		}
 	}
 	outputImage.getMat() = res_mat;
+}
+
+void translateImage(const Mat& inputImage, Mat& outputImage, int xShift, int yShift) {
+
+	if (inputImage.type() != outputImage.type() || inputImage.size() != outputImage.size()) {
+		std::cerr << "Error: Input and output images must have the same type and size." << std::endl;
+		return;
+	}
+
+	const Mat& src = inputImage;  // Avoid unnecessary copying
+	Mat& dst = outputImage;
+
+	// Iterate through all pixels within the valid region (avoid out-of-bounds access)
+	for (int y = 0; y < src.rows; y++) {
+		for (int x = 0; x < src.cols; x++) {
+			// Calculate new coordinates considering potential shifts exceeding image size
+			int newX = x + xShift;
+			int newY = y + yShift;
+
+			// Check if the translated pixel is within the output image boundaries
+			if (newX >= 0 && newX < dst.cols && newY >= 0 && newY < dst.rows) {
+				dst.at<Vec3b>(y, x) = src.at<Vec3b>(newY, newX);  // Copy pixel value
+			}
+			else {
+				// Handle pixels outside boundaries (e.g., set to black, handle differently)
+				dst.at<Vec3b>(y, x) = Vec3b(0, 0, 0);  // Example: set to black
+			}
+		}
+	}
 }
 
 #pragma endregion

@@ -89,3 +89,4 @@ struct MouseParams
 };
 
 void animate(cv::InputArray inputImage, cv::InputArray outputImage);
+void translateImage(const cv::Mat& inputImage, cv::Mat& outputImage, int xshift, int yshift);
