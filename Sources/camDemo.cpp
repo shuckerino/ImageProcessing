@@ -7,6 +7,7 @@
 *********************************************************************/
 
 #include "camDemo.h"
+#include <algorithm>
 
 #pragma region mouse interaction
 
@@ -96,7 +97,7 @@ int main(int, char**)
 	Scalar colour;
 	Mat	cam_img; //eingelesenes Kamerabild
 	Mat	last_modified_img; // img which was last modified
-	int animation_counter_up = 0;
+	uint animation_counter_up = 0;
 	int animation_counter_side = 0;
 	Mat cam_img_grey; //Graustufenkamerabild für autom. Startgesichtfestlegung
 	Mat strElement; //Strukturelement für Dilatations-Funktion
@@ -109,6 +110,7 @@ int main(int, char**)
 		frames = 0, //frames zählen für FPS-Anzeige
 		fps = 0;	//frames pro Sekunde
 	int camNum = 2;
+	int counter = 0;
 	bool fullscreen_flag = false; //Ist fullscreen aktivert oder nicht?
 	bool median_flag = false;
 	bool flip_flag = true;
@@ -255,39 +257,6 @@ int main(int, char**)
 			medianBlur(cam_img, cam_img, 15);
 		}
 
-		if (animation_flag)
-		{
-			if (start_animation)
-			{
-				//cam_img.copyTo(last_modified_img);
-				animation_counter_up = 0;
-				animation_counter_side = 1;
-				start_animation = false;
-				start_fall = false;
-			}
-
-			if (animation_counter_up > height - 150)
-			{
-				animation_counter_up = 0;
-				animation_counter_side = 0;
-				start_fall = true;
-			}
-
-			if (start_fall)
-			{
-				animation_counter_up -= 5;
-				translateImage(cam_img, cam_img, animation_counter_side, animation_counter_up);
-
-			}
-			else
-			{
-				// ascend
-				animation_counter_up += 1;
-				animation_counter_side = -1 * (animation_counter_side + 2);
-				translateImage(cam_img, cam_img, animation_counter_side, animation_counter_up);
-			}
-		}
-
 		/* example of accessing the image data */
 		/* order is:
 			BGRBGRBGR...
@@ -378,21 +347,21 @@ int main(int, char**)
 			}
 		}
 
-		/* example for using the mouse events */
 		if (click_left(mp, folder))
 		{
-			// state = DEMO_STOP;
-			for (int y = mp.mouse_pos.y - 20; y < mp.mouse_pos.y + 20; y++) /* all rows */
-			{
-				for (int x = mp.mouse_pos.x - 15; x < mp.mouse_pos.x + 15; x++)/* all columns */
-				{
-					unsigned long pos = x * channels + y * stride; /* position of pixel (R component) */
-					for (unsigned int c = 0; c < channels; c++) /* all components */
-					{
-						cam_img.data[pos + c] = 0; /* set all components to black */
-					}
-				}
-			}
+			start_animation = true;
+			counter = width / 2;
+		}
+
+		if (start_animation) 
+		{
+			counter--;
+			//drawBlackHole(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, 50);
+			createBlackHoleEffect(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, counter);
+
+			// end animation
+			if (counter == 0)
+				start_animation = false;
 		}
 
 		/********************************************************************************************/
@@ -419,60 +388,110 @@ int main(int, char**)
 	cvDestroyAllWindows();
 	//_CrtDumpMemoryLeaks();
 	exit(0);
-	}
+}
 
 #pragma endregion
 
+#pragma region Project
 
-#pragma region Custom animations
-
-void animate(cv::InputArray inputImage, cv::InputArray outputImage)
+void drawBlackHole(Mat& inputImage, unsigned centreX, unsigned centreY, unsigned int radius)
 {
-	auto mat = inputImage.getMat();
-	auto res_mat = inputImage.getMat();
-	for (int i = 0; i < mat.rows; i++)
+	for (unsigned int y = centreY - radius; y <= centreY + radius; y++)
 	{
-		for (int j = 0; j < mat.cols; j++)
+		for (unsigned int x = centreX - radius; x <= centreX + radius; x++)
 		{
-			Vec3b pixel = mat.at<Vec3b>(i, j);
-			//res_mat.at<Vec3b>(i, j) = pixel + Vec3b(100, -50, -50);
-
-			if (i + 5 < mat.rows && j + 5 > mat.cols)
-				res_mat.at<Vec3b>(i, j) = mat.at<Vec3b>(i + 5, j + 5);
-			else
-				res_mat.at<Vec3b>(i, j) = Vec3b(0, 0, 0);
+			unsigned int distance_x = centreX - x;
+			unsigned int distance_y = centreY - y;
+			unsigned int squaredDistance = distance_x * distance_x + distance_y * distance_y;
+			if (squaredDistance <= radius * radius)
+			{
+				inputImage.at<Vec3b>(y, x) = Vec3b(0, 0, 0);
+			}
 		}
 	}
-	outputImage.getMat() = res_mat;
 }
 
-void translateImage(const Mat& inputImage, Mat& outputImage, int xShift, int yShift) {
+//void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius) {
+//
+//	int rows = inputImage.rows;
+//	int cols = inputImage.cols;
+//
+//	// Parameters to control the intensity of the distortion effect
+//	float distortionStrength = 1.0;  // Larger values = stronger distortion
+//
+//	for (int y = 0; y < rows; y++) {
+//		for (int x = 0; x < cols; x++) {
+//			// Calculate the distance of the current pixel from the black hole center
+//			float distanceX = x - centreX;
+//			float distanceY = y - centreY;
+//			float distance = sqrt(distanceX * distanceX + distanceY * distanceY);
+//
+//			// Only apply distortion within the specified radius
+//			//if (distance < radius) {
+//			//	// Calculate a "pull" factor that gets stronger as we approach the center
+//			//	float pullFactor = 1.0 - (distortionStrength * (radius - distance) / radius);
+//
+//			//	// Compute new (source) coordinates for the current pixel
+//			//	int srcX = centreX + static_cast<int>(distanceX * pullFactor);
+//			//	int srcY = centreY + static_cast<int>(distanceY * pullFactor);
+//
+//			//	//// Ensure coordinates are within image bounds
+//			//	//srcX = std::min(std::max(srcX, 0), cols - 1);
+//			//	//srcY = std::min(std::max(srcY, 0), rows - 1);
+//
+//			//	// Set the output pixel to the color of the source pixel
+//			//	outputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(srcY, srcX);
+//			//}
+//			if (distance <= 50) 
+//			{
+//				// Copy pixels outside the radius without distortion
+//				inputImage.at<cv::Vec3b>(y, x) = Vec3b(0, 0, 0);
+//			}
+//			if (distance >= radius) 
+//			{
+//				inputImage.at<cv::Vec3b>(y, x) = Vec3b(0, 0, 0);
+//			}
+//		}
+//	}
+//}
 
-	if (inputImage.type() != outputImage.type() || inputImage.size() != outputImage.size()) {
-		std::cerr << "Error: Input and output images must have the same type and size." << std::endl;
-		return;
-	}
+void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius) {
+	int rows = inputImage.rows;
+	int cols = inputImage.cols;
 
-	const Mat& src = inputImage;  // Avoid unnecessary copying
-	Mat& dst = outputImage;
+	// Parameters to control the intensity of the distortion effect
+	float distortionStrength = 4.0f;  // Larger values = stronger distortion
 
-	// Iterate through all pixels within the valid region (avoid out-of-bounds access)
-	for (int y = 0; y < src.rows; y++) {
-		for (int x = 0; x < src.cols; x++) {
-			// Calculate new coordinates considering potential shifts exceeding image size
-			int newX = x + xShift;
-			int newY = y + yShift;
+	for (int y = 0; y < rows; y++) {
+		for (int x = 0; x < cols; x++) {
+			// Calculate the distance of the current pixel from the black hole center
+			float distanceX = x - centreX;
+			float distanceY = y - centreY;
+			float distance = sqrt(distanceX * distanceX + distanceY * distanceY);
 
-			// Check if the translated pixel is within the output image boundaries
-			if (newX >= 0 && newX < dst.cols && newY >= 0 && newY < dst.rows) {
-				dst.at<Vec3b>(y, x) = src.at<Vec3b>(newY, newX);  // Copy pixel value
+			// If the pixel is inside the radius, apply distortion (pull effect)
+			if (distance < radius) {
+				// Calculate a "pull" factor that gets stronger as we approach the center
+				float pullFactor = (1.0f - (distance / radius)) * distortionStrength;
+
+				// Compute new (distorted) coordinates for the current pixel (move towards the center)
+				int srcX = centreX + static_cast<int>(distanceX * pullFactor);
+				int srcY = centreY + static_cast<int>(distanceY * pullFactor);
+
+				//// Ensure the coordinates are within image bounds
+				//srcX = std::min(std::max(srcX, 0), cols - 1);
+				//srcY = std::min(std::max(srcY, 0), rows - 1);
+
+				// Move the pixel to the new distorted position
+				inputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(srcY, srcX);
 			}
+			// Set pixels outside the radius to black
 			else {
-				// Handle pixels outside boundaries (e.g., set to black, handle differently)
-				dst.at<Vec3b>(y, x) = Vec3b(0, 0, 0);  // Example: set to black
+				inputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
 			}
 		}
 	}
 }
 
 #pragma endregion
+

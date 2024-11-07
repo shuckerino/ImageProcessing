@@ -11,6 +11,8 @@
 #include <opencv2/core/core.hpp> 
 #include <opencv2/highgui/highgui_c.h>
 
+
+#include <algorithm>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +20,7 @@
 #include "stdafx.h"
 #include <time.h>
 
-#pragma comment( lib, "winmm.lib")  //für MSV C++  für play sounds
+#pragma comment( lib, "winmm.lib")
 
 /* add the libs to the list of library dependencies */
 #ifdef _DEBUG	
@@ -36,8 +38,6 @@
 	//#pragma comment(lib, "../bin/opencv_video401.lib")	
 	#pragma comment(lib, "../bin/opencv_videoio401.lib")	
 	#pragma comment(lib, "../bin/opencv_objdetect401.lib")	
-	//schaltet Konsole im Release-Modus aus
-	//#pragma comment( linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup") 
 #endif
 
 using namespace std;
@@ -88,5 +88,6 @@ struct MouseParams
     int evt;
 };
 
-void animate(cv::InputArray inputImage, cv::InputArray outputImage);
-void translateImage(const cv::Mat& inputImage, cv::Mat& outputImage, int xshift, int yshift);
+void drawBlackHole(Mat& inputImage, unsigned int width, unsigned int height, unsigned int radius);
+
+void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius);
