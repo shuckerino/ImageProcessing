@@ -1,11 +1,3 @@
-/*****************************************************************
-*	File...:	camDemo.cpp
-*	Purpose:	video processing
-*	Date...:	30.09.2019
-*	Changes:	16.10.2024 mouse events
-*
-*********************************************************************/
-
 #include "camDemo.h"
 #include <algorithm>
 
@@ -41,10 +33,13 @@ bool click_left(MouseParams mp, char* folder)
 	return false;
 }
 
-/* --------------------------------------------------------------
- * click_in_rect()
- * Wurde in einen bestimmten Bereich mit links geklickt?
- *----------------------------------------------------------------*/
+/// <summary>
+/// Check if left click was performed in rect
+/// </summary>
+/// <param name="mp"></param>
+/// <param name="rect"></param>
+/// <param name="folder"></param>
+/// <returns></returns>
 bool click_in_rect(MouseParams mp, Rect rect, char* folder)
 {
 	if (mp.evt == EVENT_LBUTTONDOWN)
@@ -63,10 +58,12 @@ bool click_in_rect(MouseParams mp, Rect rect, char* folder)
 	return false;
 }
 
-/* --------------------------------------------------------------
- * mouse_in_rect()
- * Wurde Mauszeiger in einen bestimmten Bereich bewegt?
- *----------------------------------------------------------------*/
+/// <summary>
+/// Checks if mouse was moved in area of rect
+/// </summary>
+/// <param name="mp"></param>
+/// <param name="rect"></param>
+/// <returns></returns>
 bool mouse_in_rect(MouseParams mp, Rect rect)
 {
 	if (mp.evt == EVENT_MOUSEMOVE)
@@ -93,31 +90,31 @@ int main(int, char**)
 	const char* folder2 = "../Resources";
 	char folder[15], path[512];
 
-	MouseParams mp; // Le-Wi: Zur Auswertung von Mouse-Events
+	MouseParams mp;
 	Scalar colour;
-	Mat	cam_img; //eingelesenes Kamerabild
-	Mat	last_modified_img; // img which was last modified
+	Mat	cam_img;
 	uint animation_counter_up = 0;
 	int animation_counter_side = 0;
-	Mat cam_img_grey; //Graustufenkamerabild für autom. Startgesichtfestlegung
+	Mat cam_img_grey;
 	Mat strElement; //Strukturelement für Dilatations-Funktion
 	Mat3b rgb_scale;	// leerer Bildkontainer für RGB-Werte
 	char* windowGameOutput = "camDemo"; // Name of window
-	//double	scale = 1.0;				// Skalierung der Berechnungsmatrizen 
-	unsigned int width, height, channels, stride;	// Werte des angezeigten Bildes
+	unsigned int width, height, channels, stride;
 	int
 		key = 0,	// Tastatureingabe
 		frames = 0, //frames zählen für FPS-Anzeige
-		fps = 0;	//frames pro Sekunde
+		fps = 0,
+		scalingFactor = 4;
+	float radiusMult = 0.84;
 	int camNum = 2;
 	int counter = 0;
-	bool fullscreen_flag = false; //Ist fullscreen aktivert oder nicht?
+	bool fullscreen_flag = false;
 	bool median_flag = false;
 	bool flip_flag = true;
 	bool animation_flag = false;
 	bool start_animation = false;
 	bool start_fall = false;
-	DemoState state; //Aktueller Zustand des Spiels
+	DemoState state;
 #if defined _DEBUG || defined LOGGING
 	FILE* log = NULL;
 	log = fopen("log_debug.txt", "wt");
@@ -126,13 +123,15 @@ int main(int, char**)
 	clock_t start_time, finish_time;
 
 	VideoCapture cap;
+
+	// check connected cameras
 	do
 	{
-		camNum--; /* try next camera */
+		camNum--;
 		cap.open(camNum);
-	} while (camNum > 0 && !cap.isOpened()); /* solange noch andere Kameras verfügbar sein könnten */
+	} while (camNum > 0 && !cap.isOpened());
 
-	if (!cap.isOpened())	// ist die Kamera nicht aktiv?
+	if (!cap.isOpened())
 	{
 		AllocConsole();
 		printf("Keine Kamera gefunden!\n");
@@ -146,15 +145,15 @@ int main(int, char**)
 	}
 	else
 	{
-		/* some infos on console	*/
-		//printf( "==> Program Control <==\n");
-		//printf( "==                   ==\n");
-		//printf( "* Start Screen\n");
-		//printf( " - 'ESC' stop the program \n");
-		//printf( " - 'p'   open the camera-settings panel\n");
-		//printf( " - 't'   toggle window size\n");
-		//printf( " - 'f'   toggle fullscreen\n");
-		//printf( " - 'ESC' return to Start Screen \n");
+		// print manual on screen
+		printf("==> Program Control <==\n");
+		printf("==                   ==\n");
+		printf("* Start Screen\n");
+		printf(" - 'ESC' stop the program \n");
+		printf(" - 'p'   open the camera-settings panel\n");
+		printf(" - 't'   toggle window size\n");
+		printf(" - 'f'   toggle fullscreen\n");
+		printf(" - 'ESC' return to Start Screen \n");
 	}
 	{
 		HWND console = GetConsoleWindow();
@@ -167,7 +166,7 @@ int main(int, char**)
 	}
 
 #ifndef _DEBUG
-	FreeConsole(); //Konsole ausschalten
+	FreeConsole();
 #endif
 
 	// capture the image
@@ -186,7 +185,7 @@ int main(int, char**)
 
 	srand((unsigned)time(NULL)); //seeds the random number generator
 
-	/* find folder for ressources	*/
+	/* find folder for resources	*/
 	{
 		FILE* in = NULL;
 		strcpy_s(folder, folder1);/* try first folder */
@@ -208,22 +207,10 @@ int main(int, char**)
 
 	start_time = clock();
 
-
-	/* structure element for dilation of binary image */
-	//{
-	//	int strElRadius = 3;
-	//	int size = strElRadius * 2 + 1;
-	//	strElement = Mat( size, size, CV_8UC1, Scalar::all( 0)); 
-	//	//Einzeichnen des eigentlichen Strukturelements (weißer Kreis)
-	//	/* ( , Mittelpunkt, radius, weiß, thickness=gefüllt*/
-	//	circle( strElement, Point( strElRadius, strElRadius), strElRadius, Scalar( 255), -1);
-	//}
-
 	state = START_SCREEN;
 
 	// Setup zum Auswerten von Mausevents
 	setMouseCallback(windowGameOutput, mouse_event, (void*)&mp);
-
 
 	/*-------------------- main loop ---------------*/
 	while (state != DEMO_STOP)
@@ -251,29 +238,23 @@ int main(int, char**)
 		//Runterskalierung des Bildes für weniger Rechaufwand (Faktor 1/2)
 		//resize(cam_img, rgb_scale, Size(), scale, scale);
 
-		/* smoothing of images */
+		// image smoothing
 		if (median_flag) /* can be toggled with key 'm'*/
 		{
 			medianBlur(cam_img, cam_img, 15);
 		}
 
-		/* example of accessing the image data */
-		/* order is:
-			BGRBGRBGR...
-			BGRBGRBGR...
-			:
-			*/
-		for (unsigned int y = 0; y < height; y += 10) /* all 10th rows */
-		{
-			for (unsigned int x = 0; x < width; x += 10)/* all 10th columns */
-			{
-				unsigned long pos = x * channels + y * stride; /* position of pixel (B component) */
-				for (unsigned int c = 0; c < channels; c++) /* all components B, G, R */
-				{
-					cam_img.data[pos + c] = 0; /* set all components to black */
-				}
-			}
-		}
+		//for (unsigned int y = 0; y < height; y += 10) /* all 10th rows */
+		//{
+		//	for (unsigned int x = 0; x < width; x += 10)/* all 10th columns */
+		//	{
+		//		unsigned long pos = x * channels + y * stride; /* position of pixel (B component) */
+		//		for (unsigned int c = 0; c < channels; c++) /* all components B, G, R */
+		//		{
+		//			cam_img.data[pos + c] = 0; /* set all components to black */
+		//		}
+		//	}
+		//}
 
 		/* determination of frames per second*/
 		frames++;
@@ -327,6 +308,27 @@ int main(int, char**)
 			start_animation = true;
 			animation_flag = !animation_flag;
 		}
+		else if (key == 'u')
+		{
+			scalingFactor++;
+			//fprintf("Scaling factor increased to!");
+		}
+		else if (key == 'd')
+		{
+			scalingFactor--;
+			//sprintf_s("Scaling factor increased to ")
+		}
+		else if (key == 'i')
+		{
+			radiusMult += 0.02;
+			//sprintf_s("Scaling factor increased to ")
+		}
+		else if (key == 'k')
+		{
+			radiusMult -= 0.02;
+			//sprintf_s("Scaling factor increased to ")
+		}
+
 
 		if (state == START_SCREEN)
 		{
@@ -353,11 +355,11 @@ int main(int, char**)
 			counter = width / 2;
 		}
 
-		if (start_animation) 
+		if (start_animation)
 		{
 			counter--;
 			//drawBlackHole(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, 50);
-			createBlackHoleEffect(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, counter);
+			createBlackHoleEffect(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, counter, radiusMult, scalingFactor, 10);
 
 			// end animation
 			if (counter == 0)
@@ -394,6 +396,13 @@ int main(int, char**)
 
 #pragma region Project
 
+/// <summary>
+/// Drawing black circle at certain position
+/// </summary>
+/// <param name="inputImage"></param>
+/// <param name="centreX"></param>
+/// <param name="centreY"></param>
+/// <param name="radius"></param>
 void drawBlackHole(Mat& inputImage, unsigned centreX, unsigned centreY, unsigned int radius)
 {
 	for (unsigned int y = centreY - radius; y <= centreY + radius; y++)
@@ -411,86 +420,119 @@ void drawBlackHole(Mat& inputImage, unsigned centreX, unsigned centreY, unsigned
 	}
 }
 
-//void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius) {
-//
+//void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, int scalingFactor) {
 //	int rows = inputImage.rows;
 //	int cols = inputImage.cols;
 //
-//	// Parameters to control the intensity of the distortion effect
-//	float distortionStrength = 1.0;  // Larger values = stronger distortion
+//	// Create an output image initialized to black
+//	cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
 //
 //	for (int y = 0; y < rows; y++) {
 //		for (int x = 0; x < cols; x++) {
 //			// Calculate the distance of the current pixel from the black hole center
 //			float distanceX = x - centreX;
 //			float distanceY = y - centreY;
-//			float distance = sqrt(distanceX * distanceX + distanceY * distanceY);
+//			float distance = std::sqrt(distanceX * distanceX + distanceY * distanceY);
 //
-//			// Only apply distortion within the specified radius
-//			//if (distance < radius) {
-//			//	// Calculate a "pull" factor that gets stronger as we approach the center
-//			//	float pullFactor = 1.0 - (distortionStrength * (radius - distance) / radius);
+//			if (distance < radius) {
+//				// Reverse the mapping: find the corresponding input pixel for this output pixel
+//				// Scale distortion: stronger distortion for outer pixels
+//				//float scale = distance / radius; // Distortion increases with distance
+//				float scale = pow(distance / radius, 5);
+//				float directionX = distanceX * scale;
+//				float directionY = distanceY * scale;
 //
-//			//	// Compute new (source) coordinates for the current pixel
-//			//	int srcX = centreX + static_cast<int>(distanceX * pullFactor);
-//			//	int srcY = centreY + static_cast<int>(distanceY * pullFactor);
+//				// Map this output pixel to a source pixel in the input image
+//				int sourceX = static_cast<int>(x + directionX);
+//				int sourceY = static_cast<int>(y + directionY);
 //
-//			//	//// Ensure coordinates are within image bounds
-//			//	//srcX = std::min(std::max(srcX, 0), cols - 1);
-//			//	//srcY = std::min(std::max(srcY, 0), rows - 1);
-//
-//			//	// Set the output pixel to the color of the source pixel
-//			//	outputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(srcY, srcX);
-//			//}
-//			if (distance <= 50) 
-//			{
-//				// Copy pixels outside the radius without distortion
-//				inputImage.at<cv::Vec3b>(y, x) = Vec3b(0, 0, 0);
+//				// Ensure the source position is within bounds
+//				if (sourceX >= 0 && sourceX < cols && sourceY >= 0 && sourceY < rows) {
+//					outputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(sourceY, sourceX);
+//				}
 //			}
-//			if (distance >= radius) 
-//			{
-//				inputImage.at<cv::Vec3b>(y, x) = Vec3b(0, 0, 0);
+//
+//			// Make pixels disappear at the outer boundary
+//			if (distance > radius * 0.84) { // Disappear near the outer edge
+//				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
 //			}
 //		}
 //	}
+//
+//	// Copy the result back to the input image
+//	inputImage = outputImage.clone();
 //}
 
-void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius) {
+
+void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, int scalingFactor, int marginWidth) {
 	int rows = inputImage.rows;
 	int cols = inputImage.cols;
 
-	// Parameters to control the intensity of the distortion effect
-	float distortionStrength = 4.0f;  // Larger values = stronger distortion
+	// Create an output image initialized to black
+	cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
 
 	for (int y = 0; y < rows; y++) {
 		for (int x = 0; x < cols; x++) {
 			// Calculate the distance of the current pixel from the black hole center
 			float distanceX = x - centreX;
 			float distanceY = y - centreY;
-			float distance = sqrt(distanceX * distanceX + distanceY * distanceY);
+			float distance = std::sqrt(distanceX * distanceX + distanceY * distanceY);
 
-			// If the pixel is inside the radius, apply distortion (pull effect)
 			if (distance < radius) {
-				// Calculate a "pull" factor that gets stronger as we approach the center
-				float pullFactor = (1.0f - (distance / radius)) * distortionStrength;
+				// Compute the angle of the current pixel relative to the center
+				float angle = std::atan2(distanceY, distanceX);
 
-				// Compute new (distorted) coordinates for the current pixel (move towards the center)
-				int srcX = centreX + static_cast<int>(distanceX * pullFactor);
-				int srcY = centreY + static_cast<int>(distanceY * pullFactor);
+				// Introduce rotational distortion based on the distance
+				float rotationAmount = scalingFactor * (1.0f - distance / radius); // Decrease rotation with proximity
+				angle += rotationAmount;
 
-				//// Ensure the coordinates are within image bounds
-				//srcX = std::min(std::max(srcX, 0), cols - 1);
-				//srcY = std::min(std::max(srcY, 0), rows - 1);
+				// Compute scaled distance for the black hole effect
+				float scale = std::pow(distance / radius, 5);
+				float distortedDistance = distance + scale * radiusMult;
 
-				// Move the pixel to the new distorted position
-				inputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(srcY, srcX);
+				// Convert polar coordinates back to Cartesian coordinates
+				float sourceX = centreX + distortedDistance * std::cos(angle);
+				float sourceY = centreY + distortedDistance * std::sin(angle);
+
+				// Ensure the source position is within bounds
+				if (sourceX >= 0 && sourceX < cols && sourceY >= 0 && sourceY < rows) {
+					outputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(static_cast<int>(sourceY), static_cast<int>(sourceX));
+				}
 			}
-			// Set pixels outside the radius to black
-			else {
-				inputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
+			else if (distance < radius + marginWidth) 
+			{
+				// Create a smooth gradient for the margin area using easing
+				float gradientFactor = (distance - radius) / marginWidth;
+
+				// Use a cosine-based easing function for smoother transitions
+				float easedFactor = 0.8f * (1.0f - std::cos(gradientFactor * CV_PI));
+
+				// Interpolate color: orange (0, 165, 255) to red (0, 0, 255)
+				uchar blue = static_cast<uchar>(0);                          // Blue channel stays 0
+				uchar green = static_cast<uchar>(165 * (1.0f - easedFactor)); // Green fades out smoothly
+				uchar red = static_cast<uchar>(255);                         // Red stays full
+
+				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(blue, green, red);
+			}
+			else if (distance > radius * 0.84)
+			{
+				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
 			}
 		}
 	}
+
+	// Copy the result back to the input image
+	inputImage = outputImage.clone();
+}
+
+void showUISlider(int radiusMult, int scalingFactor) 
+{
+	cv::createTrackbar("Radius", "camDemo", &radiusMult, 100, onScalingChanged);
+}
+
+void onScalingChanged(int, void*) 
+{
+
 }
 
 #pragma endregion
