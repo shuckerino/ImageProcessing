@@ -25,7 +25,7 @@ bool click_left(MouseParams mp, char* folder)
 	{
 		{
 			char path[512];
-			sprintf_s(path, "%s/click_on_button.wav", folder);
+			sprintf_s(path, "%s/black_hole.wav", folder);
 			PlaySoundA(path, NULL, SND_ASYNC);
 			return true;
 		}
@@ -50,7 +50,7 @@ bool click_in_rect(MouseParams mp, Rect rect, char* folder)
 			mp.mouse_pos.y <= rect.y + rect.height)
 		{
 			char path[512];
-			sprintf_s(path, "%s/click_on_button.wav", folder);
+			sprintf_s(path, "%s/black_hole.wav", folder);
 			PlaySoundA(path, NULL, SND_ASYNC);
 			return true;
 		}
@@ -189,12 +189,12 @@ int main(int, char**)
 	{
 		FILE* in = NULL;
 		strcpy_s(folder, folder1);/* try first folder */
-		sprintf_s(path, "%s/click_on_button.wav", folder);
+		sprintf_s(path, "%s/black_hole.wav", folder);
 		in = fopen(path, "r");
 		if (in == NULL)
 		{
 			strcpy_s(folder, folder2); /* try other folder */
-			sprintf_s(path, "%s/click_on_button.wav", folder);
+			sprintf_s(path, "%s/black_hole.wav", folder);
 			in = fopen(path, "r");
 			if (in == NULL)
 			{
@@ -362,8 +362,11 @@ int main(int, char**)
 			createBlackHoleEffect(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, counter, radiusMult, scalingFactor, 10);
 
 			// end animation
-			if (counter == 0)
+			if (counter == 0) 
+			{
 				start_animation = false;
+				PlaySound(NULL, NULL, 0); // cancel sound
+			}
 		}
 
 		/********************************************************************************************/
