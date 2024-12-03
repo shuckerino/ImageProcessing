@@ -88,9 +88,7 @@ struct MouseParams
     int evt;
 };
 
-void drawBlackHole(Mat& inputImage, unsigned int width, unsigned int height, unsigned int radius);
-
-void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, int scalingFactor, int marginWidth);
+void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, float scalingFactor, int marginWidth);
 
 void showUISlider(int radiusMult, int scalingFactor);
 void onScalingChanged(int, void*);

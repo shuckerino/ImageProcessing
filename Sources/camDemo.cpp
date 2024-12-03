@@ -7,6 +7,15 @@
  * mouse_event()
  * openCV-Funktion um MouseEvents auszuwerten
  *----------------------------------------------------------------*/
+
+/// <summary>
+/// Mouse event
+/// </summary>
+/// <param name="evt"></param>
+/// <param name="x"></param>
+/// <param name="y"></param>
+/// <param name=""></param>
+/// <param name="param"></param>
 void mouse_event(int evt, int x, int y, int, void* param)
 {
 	MouseParams* mp = (MouseParams*)param;
@@ -81,7 +90,7 @@ bool mouse_in_rect(MouseParams mp, Rect rect)
 
 #pragma endregion
 
-#pragma region main
+#pragma region Main
 
 int main(int, char**)
 {
@@ -103,8 +112,8 @@ int main(int, char**)
 	int
 		key = 0,	// Tastatureingabe
 		frames = 0, //frames zählen für FPS-Anzeige
-		fps = 0,
-		scalingFactor = 4;
+		fps = 0;
+	float scalingFactor = 4.0f;
 	float radiusMult = 0.84;
 	int camNum = 2;
 	int counter = 0;
@@ -399,75 +408,7 @@ int main(int, char**)
 
 #pragma region Project
 
-/// <summary>
-/// Drawing black circle at certain position
-/// </summary>
-/// <param name="inputImage"></param>
-/// <param name="centreX"></param>
-/// <param name="centreY"></param>
-/// <param name="radius"></param>
-void drawBlackHole(Mat& inputImage, unsigned centreX, unsigned centreY, unsigned int radius)
-{
-	for (unsigned int y = centreY - radius; y <= centreY + radius; y++)
-	{
-		for (unsigned int x = centreX - radius; x <= centreX + radius; x++)
-		{
-			unsigned int distance_x = centreX - x;
-			unsigned int distance_y = centreY - y;
-			unsigned int squaredDistance = distance_x * distance_x + distance_y * distance_y;
-			if (squaredDistance <= radius * radius)
-			{
-				inputImage.at<Vec3b>(y, x) = Vec3b(0, 0, 0);
-			}
-		}
-	}
-}
-
-//void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, int scalingFactor) {
-//	int rows = inputImage.rows;
-//	int cols = inputImage.cols;
-//
-//	// Create an output image initialized to black
-//	cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
-//
-//	for (int y = 0; y < rows; y++) {
-//		for (int x = 0; x < cols; x++) {
-//			// Calculate the distance of the current pixel from the black hole center
-//			float distanceX = x - centreX;
-//			float distanceY = y - centreY;
-//			float distance = std::sqrt(distanceX * distanceX + distanceY * distanceY);
-//
-//			if (distance < radius) {
-//				// Reverse the mapping: find the corresponding input pixel for this output pixel
-//				// Scale distortion: stronger distortion for outer pixels
-//				//float scale = distance / radius; // Distortion increases with distance
-//				float scale = pow(distance / radius, 5);
-//				float directionX = distanceX * scale;
-//				float directionY = distanceY * scale;
-//
-//				// Map this output pixel to a source pixel in the input image
-//				int sourceX = static_cast<int>(x + directionX);
-//				int sourceY = static_cast<int>(y + directionY);
-//
-//				// Ensure the source position is within bounds
-//				if (sourceX >= 0 && sourceX < cols && sourceY >= 0 && sourceY < rows) {
-//					outputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(sourceY, sourceX);
-//				}
-//			}
-//
-//			// Make pixels disappear at the outer boundary
-//			if (distance > radius * 0.84) { // Disappear near the outer edge
-//				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
-//			}
-//		}
-//	}
-//
-//	// Copy the result back to the input image
-//	inputImage = outputImage.clone();
-//}
-
-
-void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, int scalingFactor, int marginWidth) {
+void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int radius, int radiusMult, float scalingFactor, int marginWidth) {
 	int rows = inputImage.rows;
 	int cols = inputImage.cols;
 
@@ -504,16 +445,19 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 			}
 			else if (distance < radius + marginWidth) 
 			{
-				// Create a smooth gradient for the margin area using easing
+				// Calculate gradient factor (0 at radius, 1 at radius + marginWidth)
 				float gradientFactor = (distance - radius) / marginWidth;
 
-				// Use a cosine-based easing function for smoother transitions
-				float easedFactor = 0.8f * (1.0f - std::cos(gradientFactor * CV_PI));
+				// Use a sigmoid-like easing function for smooth blending
+				float easedFactor = 1.0f / (1.0f + std::exp(-10 * (gradientFactor - 0.5)));
 
-				// Interpolate color: orange (0, 165, 255) to red (0, 0, 255)
-				uchar blue = static_cast<uchar>(0);                          // Blue channel stays 0
-				uchar green = static_cast<uchar>(165 * (1.0f - easedFactor)); // Green fades out smoothly
-				uchar red = static_cast<uchar>(255);                         // Red stays full
+				// Darken the outer edge towards black
+				float brightness = easedFactor; // Adjust brightness with easedFactor
+
+				// Interpolate color: dark edge to bright margin
+				uchar blue = static_cast<uchar>(brightness * 255);
+				uchar green = static_cast<uchar>(brightness * 165);
+				uchar red = static_cast<uchar>(brightness * 255);
 
 				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(blue, green, red);
 			}
