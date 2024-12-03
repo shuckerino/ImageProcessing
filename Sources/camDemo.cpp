@@ -1,7 +1,7 @@
 #include "camDemo.h"
 #include <algorithm>
 
-#pragma region mouse interaction
+#pragma region Mouse interaction
 
 /* --------------------------------------------------------------
  * mouse_event()
@@ -367,7 +367,6 @@ int main(int, char**)
 		if (start_animation)
 		{
 			counter--;
-			//drawBlackHole(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, 50);
 			createBlackHoleEffect(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, counter, radiusMult, scalingFactor, 10);
 
 			// end animation
@@ -455,13 +454,13 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 				float brightness = easedFactor; // Adjust brightness with easedFactor
 
 				// Interpolate color: dark edge to bright margin
-				uchar blue = static_cast<uchar>(brightness * 255);
-				uchar green = static_cast<uchar>(brightness * 165);
+				uchar blue = static_cast<uchar>(brightness * 1);
+				uchar green = static_cast<uchar>(brightness * 1);
 				uchar red = static_cast<uchar>(brightness * 255);
 
 				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(blue, green, red);
 			}
-			else if (distance > radius * 0.84)
+			else if (distance > radius * radiusMult)
 			{
 				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
 			}
