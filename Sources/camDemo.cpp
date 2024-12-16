@@ -107,16 +107,17 @@ int main(int, char**)
 	Mat cam_img_grey;
 	Mat strElement; //Strukturelement für Dilatations-Funktion
 	Mat3b rgb_scale;	// leerer Bildkontainer für RGB-Werte
-	char* windowGameOutput = "camDemo"; // Name of window
+	char* windowGameOutput = "BlackHole Effect"; // Name of window
 	unsigned int width, height, channels, stride;
 	int
 		key = 0,	// Tastatureingabe
 		frames = 0, //frames zählen für FPS-Anzeige
 		fps = 0;
-	float scalingFactor = 4.0f;
-	float radiusMult = 0.84;
+	float scalingFactor = 1.0f;
+	float radiusMult = 1.9;
 	int camNum = 2;
 	int counter = 0;
+	int initialCounter;
 	bool fullscreen_flag = false;
 	bool median_flag = false;
 	bool flip_flag = true;
@@ -361,12 +362,21 @@ int main(int, char**)
 		if (click_left(mp, folder))
 		{
 			start_animation = true;
-			counter = width / 2;
+			initialCounter = width / 2 + 50;
+			counter = initialCounter;
+			scalingFactor = 1.0f;
 		}
 
 		if (start_animation)
 		{
-			counter--;
+			float progress = (float)counter / initialCounter; // normalize (1.0 to 0.0)
+			float decrement = 1 + (1 - progress) * 1.2; // adjust to control the speed of the effect
+			counter -= (int)decrement;
+
+			// make sure counter does not go below 0
+			if (counter < 0) counter = 0;
+
+			scalingFactor += 0.025f; // increase the distortion
 			createBlackHoleEffect(cam_img, mp.mouse_pos.x, mp.mouse_pos.y, counter, radiusMult, scalingFactor, 10);
 
 			// end animation
@@ -377,17 +387,15 @@ int main(int, char**)
 			}
 		}
 
-		/********************************************************************************************/
-		/* show window with live video	*/		//Le-Wi: Funktionalitäten zum Schließen (x-Button)
 		if (!IsWindowVisible(cvHwnd))
 		{
 			break;
 		}
 		imshow(windowGameOutput, cam_img); //Ausgabefenster darstellen
-	}	// Ende der Endlos-Schleife
+	}	// end of while loop
 
-	//Freigabe aller Matrizen
-	if (cap.isOpened()) cap.release(); //Freigabe der Kamera
+	// release resources
+	if (cap.isOpened()) cap.release();
 	if (cam_img.data) cam_img.release();
 	if (cam_img_grey.data) cam_img_grey.release();
 	if (rgb_scale.data) rgb_scale.release();
@@ -470,16 +478,5 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 	// Copy the result back to the input image
 	inputImage = outputImage.clone();
 }
-
-void showUISlider(int radiusMult, int scalingFactor) 
-{
-	cv::createTrackbar("Radius", "camDemo", &radiusMult, 100, onScalingChanged);
-}
-
-void onScalingChanged(int, void*) 
-{
-
-}
-
 #pragma endregion
 
