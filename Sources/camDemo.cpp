@@ -370,7 +370,7 @@ int main(int, char**)
 		if (start_animation)
 		{
 			float progress = (float)counter / initialCounter; // normalize (1.0 to 0.0)
-			float decrement = 1 + (1 - progress) * 1.2; // adjust to control the speed of the effect
+			float decrement = 1 + (1 - progress) * 1.1; // adjust to control the speed of the effect
 			counter -= (int)decrement;
 
 			// make sure counter does not go below 0
@@ -462,9 +462,9 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 				float brightness = easedFactor; // Adjust brightness with easedFactor
 
 				// Interpolate color: dark edge to bright margin
-				uchar blue = static_cast<uchar>(brightness * 1);
-				uchar green = static_cast<uchar>(brightness * 1);
-				uchar red = static_cast<uchar>(brightness * 255);
+				uchar blue = static_cast<uchar>(brightness * 3);
+				uchar green = static_cast<uchar>(brightness * 107);
+				uchar red = static_cast<uchar>(brightness * 252);
 
 				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(blue, green, red);
 			}
