@@ -370,7 +370,7 @@ int main(int, char**)
 		if (start_animation)
 		{
 			float progress = (float)counter / initialCounter; // normalize (1.0 to 0.0)
-			float decrement = 1 + (1 - progress) * 1.1; // adjust to control the speed of the effect
+			float decrement = 1 + (1 - progress) * 1.1; // adjust factor to control the speed of the effect
 			counter -= (int)decrement;
 
 			// make sure counter does not go below 0
@@ -419,17 +419,19 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 	int rows = inputImage.rows;
 	int cols = inputImage.cols;
 
-	// Create an output image initialized to black
+	// Init output image with zeros
 	cv::Mat outputImage = cv::Mat::zeros(inputImage.size(), inputImage.type());
 
 	for (int y = 0; y < rows; y++) {
 		for (int x = 0; x < cols; x++) {
-			// Calculate the distance of the current pixel from the black hole center
+
+			// Calculate the distance of the current pixel from the black hole center (current mouse position)
 			float distanceX = x - centreX;
 			float distanceY = y - centreY;
 			float distance = std::sqrt(distanceX * distanceX + distanceY * distanceY);
 
-			if (distance < radius) {
+			if (distance < radius) { // inside black hole
+
 				// Compute the angle of the current pixel relative to the center
 				float angle = std::atan2(distanceY, distanceX);
 
@@ -438,7 +440,7 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 				angle += rotationAmount;
 
 				// Compute scaled distance for the black hole effect
-				float scale = std::pow(distance / radius, 5);
+				float scale = std::pow(distance / radius, 2);
 				float distortedDistance = distance + scale * radiusMult;
 
 				// Convert polar coordinates back to Cartesian coordinates
@@ -450,7 +452,7 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 					outputImage.at<cv::Vec3b>(y, x) = inputImage.at<cv::Vec3b>(static_cast<int>(sourceY), static_cast<int>(sourceX));
 				}
 			}
-			else if (distance < radius + marginWidth) 
+			else if (distance < radius + marginWidth) // margin
 			{
 				// Calculate gradient factor (0 at radius, 1 at radius + marginWidth)
 				float gradientFactor = (distance - radius) / marginWidth;
@@ -468,7 +470,7 @@ void createBlackHoleEffect(cv::Mat& inputImage, int centreX, int centreY, int ra
 
 				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(blue, green, red);
 			}
-			else if (distance > radius * radiusMult)
+			else if (distance > radius * radiusMult) // black outside of black hole
 			{
 				outputImage.at<cv::Vec3b>(y, x) = cv::Vec3b(0, 0, 0);
 			}
